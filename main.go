@@ -34,6 +34,7 @@ func (cfg *apiConfig) resetHits(w http.ResponseWriter, req *http.Request) {
 	cfg.fileserverHits.Store(0)
 }
 
+
 func main() {
 	serverMux := http.NewServeMux()
 
@@ -48,12 +49,24 @@ func main() {
 	serverMux.Handle("/app/", apiCfg.middlewareMetricsInc(handler))
 
 	serverMux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, req *http.Request){
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK\n"))
 	})
 
+	serverMux.HandleFunc("POST /api/validate_chirp",validateChirp)
+	
 	serverMux.HandleFunc("POST /admin/reset",apiCfg.resetHits)
 	serverMux.HandleFunc("GET /admin/metrics",apiCfg.outputHits)
+	
+
+
+
+
+
+
+
+
+
 	server.ListenAndServe()
 
 }

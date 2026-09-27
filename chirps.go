@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"net/http"
 	"encoding/json"
 )
@@ -12,6 +13,19 @@ type ChirpError struct {
 type Chirp struct {
 	Body string `json:"body"`
 }
+func ReplaceAllCI(s, old, new string) string {
+	// Compile the pattern with the (?i) flag for case-insensitivity
+	// Use regexp.QuoteMeta to escape special regex characters in 'old'
+	pattern := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(old))
+	return pattern.ReplaceAllString(s, new)
+}
+
+func (c *Chirp) cleanProfanity() {
+	blacklist := []string{"kerfuffle","sharbert","fornax"}
+	for _, black := range blacklist {
+		c.Body = ReplaceAllCI(c.Body,black,"****")
+	}
+}
 
 func NewChirp(body string) *Chirp {
 	return &Chirp{
@@ -22,8 +36,8 @@ func NewChirp(body string) *Chirp {
 func validateChirp(w http.ResponseWriter, req *http.Request) {
 	var chirp *Chirp
 
-	type returnObj struct {
-		Valid bool
+	type returnChirp struct {
+		Body string `json:"cleaned_body"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -44,8 +58,11 @@ func validateChirp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, returnObj{
-		Valid:true,
+	chirp.cleanProfanity()
+
+	respondWithJSON(w, http.StatusOK, returnChirp{
+		Body: chirp.Body,
 	})
+
 	return
 }

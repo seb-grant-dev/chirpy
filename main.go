@@ -39,13 +39,13 @@ func main() {
 	handler := http.StripPrefix("/app/",http.FileServer(http.Dir(".")))
 	serverMux.Handle("/app/", apiCfg.middlewareMetricsInc(handler))
 
-	serverMux.HandleFunc("/healthz", func(w http.ResponseWriter, req *http.Request){
+	serverMux.HandleFunc("GET /healthz", func(w http.ResponseWriter, req *http.Request){
 		w.WriteHeader(200)
 		w.Write([]byte("OK"))
 	})
 
-	serverMux.HandleFunc("/metrics",apiCfg.outputHits)
-	serverMux.HandleFunc("/reset",apiCfg.resetHits)
+	serverMux.HandleFunc("GET /metrics",apiCfg.outputHits)
+	serverMux.HandleFunc("POST /reset",apiCfg.resetHits)
 
 	server.ListenAndServe()
 

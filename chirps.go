@@ -47,6 +47,23 @@ func (h *ChirpHandler) getChirps(w http.ResponseWriter, req *http.Request) {
 
 }
 
+func (h *ChirpHandler) getChirp(w http.ResponseWriter, req *http.Request) {
+
+	chirpID,err := uuid.Parse(req.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w,400,"Error parsing chirp ID from URL")
+	}
+
+	chirp, err := h.DB.GetChirp(req.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, 404, "Chirp not found")
+		return
+	}
+
+	respondWithJSON(w,200,Chirp(chirp))
+	return
+}
+
 
 func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
 

@@ -86,6 +86,7 @@ func main() {
 	})
 
 	serverMux.HandleFunc("POST /api/users",userHandler.createUser)
+	serverMux.HandleFunc("POST /api/login", userHandler.doLogin)
 
 	serverMux.HandleFunc("GET /api/chirps",chirpHandler.getChirps)
 	serverMux.HandleFunc("GET /api/chirps/{chirpID}",chirpHandler.getChirp)

@@ -56,6 +56,7 @@ func main() {
 
 	apiCfg := &apiConfig{}
 	userHandler := &UserHandler{}
+	chirpHandler := &ChirpHandler{}
 
 	server := &http.Server{
 		Addr: ":8080",
@@ -74,6 +75,7 @@ func main() {
 	dbQueries := database.New(db)
 	apiCfg.DB = dbQueries
 	userHandler.DB = dbQueries
+	chirpHandler.DB = dbQueries
 
 	handler := http.StripPrefix("/app/",http.FileServer(http.Dir(".")))
 	serverMux.Handle("/app/", apiCfg.middlewareMetricsInc(handler))
@@ -84,8 +86,8 @@ func main() {
 	})
 
 	serverMux.HandleFunc("POST /api/users",userHandler.createUser)
+	serverMux.HandleFunc("POST /api/chirps",chirpHandler.createChirp)
 
-	serverMux.HandleFunc("POST /api/validate_chirp",validateChirp)
 	
 
 	serverMux.HandleFunc("POST /admin/reset",apiCfg.resetHits)

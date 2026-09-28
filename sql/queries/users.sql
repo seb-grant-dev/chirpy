@@ -8,6 +8,15 @@ VALUES (
 )
 RETURNING *;
 
+-- name: GetUserFromEmail :one
+SELECT
+  *
+FROM
+  users 
+WHERE
+  users.email = $1;
+
+
 
 -- name: ResetUsers :exec
 DELETE FROM users;

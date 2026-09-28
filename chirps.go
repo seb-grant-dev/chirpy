@@ -1,9 +1,13 @@
 package main
 
 import (
+	"fmt"
+	"time"
 	"regexp"
 	"net/http"
 	"encoding/json"
+	"github.com/google/uuid"
+	"github.com/seb-grant-dev/chirpy/internal/database"
 )
 
 type ChirpError struct {
@@ -11,8 +15,76 @@ type ChirpError struct {
 };
 
 type Chirp struct {
+	ID uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 	Body string `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
 }
+
+type ChirpHandler struct {
+	DB *database.Queries
+}
+func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
+
+	type params struct {
+		Body string `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
+	}
+
+	type response struct {
+		chirp Chirp
+	}
+
+	var chirp *params
+	decoder := json.NewDecoder(req.Body)
+
+	err := decoder.Decode(&chirp)
+	fmt.Printf("%+v\n",chirp)
+
+
+
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Error chirping: %s\n",err))
+		return
+	}
+
+	err = validateChirp(chirp.Body)
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Error chirping: %s\n",err))
+		return
+	}
+
+
+
+	chirpParams := database.CreateChirpParams{
+		Body: cleanProfanity(chirp.Body),
+		UserID: chirp.UserID,
+	}
+
+
+	newChirp, err := h.DB.CreateChirp(req.Context(), chirpParams)
+	if err != nil {
+		respondWithError(w,400,fmt.Sprintf("Error chirping: %s\n",err))
+		return
+	}
+
+	fmt.Printf("%+v\n",newChirp)
+
+	respondWithJSON(w,http.StatusCreated,Chirp{
+			ID: newChirp.ID,
+			CreatedAt: newChirp.CreatedAt,
+			UpdatedAt: newChirp.UpdatedAt,
+			Body: newChirp.Body,
+			UserID: newChirp.UserID,
+		})
+
+	return
+}
+
+
+
+
 func ReplaceAllCI(s, old, new string) string {
 	// Compile the pattern with the (?i) flag for case-insensitivity
 	// Use regexp.QuoteMeta to escape special regex characters in 'old'
@@ -20,11 +92,14 @@ func ReplaceAllCI(s, old, new string) string {
 	return pattern.ReplaceAllString(s, new)
 }
 
-func (c *Chirp) cleanProfanity() {
+func cleanProfanity(chirpBody string) string {
 	blacklist := []string{"kerfuffle","sharbert","fornax"}
+
 	for _, black := range blacklist {
-		c.Body = ReplaceAllCI(c.Body,black,"****")
+		chirpBody = ReplaceAllCI(chirpBody,black,"****")
 	}
+
+	return chirpBody
 }
 
 func NewChirp(body string) *Chirp {
@@ -33,36 +108,11 @@ func NewChirp(body string) *Chirp {
 	}
 }
 
-func validateChirp(w http.ResponseWriter, req *http.Request) {
-	var chirp *Chirp
+func validateChirp(chirpBody string) error {
 
-	type returnChirp struct {
-		Body string `json:"cleaned_body"`
+	if len(chirpBody) > 140 {
+		return fmt.Errorf("Chirp is too long.")
 	}
 
-	decoder := json.NewDecoder(req.Body)
-
-	err := decoder.Decode(&chirp)
-	if err != nil {
-		respondWithError(w, 400, "Error reading Chirp body")
-		return
-	}
-
-	if chirp == nil {
-		respondWithError(w, 400, "Error reading Chirp body")
-		return
-	}
-
-	if len(chirp.Body) > 140 {
-		respondWithError(w, 400, "Chirp too long")
-		return
-	}
-
-	chirp.cleanProfanity()
-
-	respondWithJSON(w, http.StatusOK, returnChirp{
-		Body: chirp.Body,
-	})
-
-	return
+	return nil
 }

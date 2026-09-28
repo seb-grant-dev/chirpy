@@ -25,6 +25,29 @@ type Chirp struct {
 type ChirpHandler struct {
 	DB *database.Queries
 }
+
+func (h *ChirpHandler) getChirps(w http.ResponseWriter, req *http.Request) {
+
+	chirps, err := h.DB.GetChirps(req.Context())
+
+
+	if err != nil {
+		respondWithError(w, 400, "Error retrieving chirps")
+		return
+	}
+
+	var retChirps []Chirp
+
+	for _, chirp := range chirps {
+		retChirps = append(retChirps, Chirp(chirp))
+	}
+
+	respondWithJSON(w, 200, retChirps)
+	return
+
+}
+
+
 func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
 
 	type params struct {
@@ -40,9 +63,6 @@ func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 
 	err := decoder.Decode(&chirp)
-	fmt.Printf("%+v\n",chirp)
-
-
 
 	if err != nil {
 		respondWithError(w, 400, fmt.Sprintf("Error chirping: %s\n",err))

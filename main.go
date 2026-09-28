@@ -86,6 +86,8 @@ func main() {
 	})
 
 	serverMux.HandleFunc("POST /api/users",userHandler.createUser)
+
+	serverMux.HandleFunc("GET /api/chirps",chirpHandler.getChirps)
 	serverMux.HandleFunc("POST /api/chirps",chirpHandler.createChirp)
 
 	
@@ -93,13 +95,6 @@ func main() {
 	serverMux.HandleFunc("POST /admin/reset",apiCfg.resetHits)
 	serverMux.HandleFunc("GET /admin/metrics",apiCfg.outputHits)
 	
-
-
-
-
-
-
-
 
 
 	server.ListenAndServe()

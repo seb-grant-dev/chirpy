@@ -13,7 +13,9 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	DB *database.Queries
+	platform string
 }
+
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 	fmt.Println("Applying tracking middleware")
@@ -37,9 +39,15 @@ func (cfg *apiConfig) outputHits(w http.ResponseWriter, req *http.Request) {
 }
 
 func (cfg *apiConfig) resetHits(w http.ResponseWriter, req *http.Request) {
+	if cfg.platform != "dev" {
+		w.WriteHeader(403)
+		w.Write([]byte("403 Forbidden\n"))
+		return
+	}
 	cfg.fileserverHits.Store(0)
+	cfg.DB.ResetUsers(req.Context())
+	respondWithJSON(w, 200, "Stats and users reset.")
 }
-
 
 func main() {
 
@@ -47,18 +55,25 @@ func main() {
 	serverMux := http.NewServeMux()
 
 	apiCfg := &apiConfig{}
+	userHandler := &UserHandler{}
 
 	server := &http.Server{
 		Addr: ":8080",
 		Handler: serverMux,
 	}
 
+	apiCfg.platform = os.Getenv("PLATFORM")
+
 	dbUrl := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres",dbUrl)
 	if err != nil {
-		dbQueries := database.New(db)
-		apiCfg.DB = dbQueries
+		fmt.Errorf("FATAL: Could not connect to database [%s]\n",err)
+		os.Exit(1)
 	}
+	
+	dbQueries := database.New(db)
+	apiCfg.DB = dbQueries
+	userHandler.DB = dbQueries
 
 	handler := http.StripPrefix("/app/",http.FileServer(http.Dir(".")))
 	serverMux.Handle("/app/", apiCfg.middlewareMetricsInc(handler))
@@ -68,8 +83,11 @@ func main() {
 		w.Write([]byte("OK\n"))
 	})
 
+	serverMux.HandleFunc("POST /api/users",userHandler.createUser)
+
 	serverMux.HandleFunc("POST /api/validate_chirp",validateChirp)
 	
+
 	serverMux.HandleFunc("POST /admin/reset",apiCfg.resetHits)
 	serverMux.HandleFunc("GET /admin/metrics",apiCfg.outputHits)
 	

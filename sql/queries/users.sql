@@ -4,6 +4,10 @@ VALUES (
     gen_random_uuid(),
     NOW(),
     NOW(),
-    "hello@sebasstiangrant.co.uk"
+    $1
 )
 RETURNING *;
+
+
+-- name: ResetUsers :exec
+DELETE FROM users;

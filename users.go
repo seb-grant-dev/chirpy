@@ -17,6 +17,7 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Email 		string 		`json:"email"`
 	Token			string 		`json:"token"`
+	RefreshToken			string 		`json:"refresh_token"`
 }
 
 type UserHandler struct {
@@ -80,7 +81,6 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
 		Email string `json:"email"`
-		ExpiresInSeconds int `json:"expires_in_seconds"`
 	}
 
 	var user *parameters
@@ -106,15 +106,6 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 
 		expirySecs := 3600
 
-		if user.ExpiresInSeconds != 0 {
-			if (user.ExpiresInSeconds < expirySecs) {
-				expirySecs = user.ExpiresInSeconds
-			}
-		}
-
-		
-		fmt.Println(expirySecs)
-
 		expiry := time.Duration(expirySecs) * time.Second
 
 		token, err := auth.MakeJWT(loggedInUser.ID, h.jwtSecret, expiry)
@@ -123,7 +114,20 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		fmt.Sprintf("Token: %s",token)
+		refresh_token := auth.MakeRefreshToken()
+		if refresh_token == "" {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Login failed: Refresh token not generated\n"))
+		}
+
+		refreshTokenParams := database.SaveUserRefreshTokenParams{
+			Token: refresh_token,
+			UserID: loggedInUser.ID,
+			ExpiresAt: time.Now().AddDate(0,0,60),
+		}
+		_,err = h.DB.SaveUserRefreshToken(req.Context(),refreshTokenParams)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error saving refresh_token: %s\n",err))
+		}
 
 		retUser := User{
 			ID: loggedInUser.ID,
@@ -131,6 +135,7 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 			UpdatedAt: loggedInUser.UpdatedAt,
 			Email: loggedInUser.Email,
 			Token: token,
+			RefreshToken: refresh_token,
 		}
 
 		respondWithJSON(w, http.StatusOK, retUser)
@@ -139,4 +144,63 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
+}
+
+func (h *UserHandler) refreshToken(w http.ResponseWriter, req *http.Request) {
+	token,err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error refreshing tokens")
+		return
+	}
+
+	refresh_token, err := h.DB.GetRefreshToken(req.Context(),token)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "")
+		return
+	}
+
+	fmt.Printf("Refresh Token: %+v",refresh_token)
+	fmt.Printf("Refresh Token Revoked: %v",refresh_token.RevokedAt.Valid)
+
+
+	if refresh_token.RevokedAt.Valid {
+		respondWithError(w, http.StatusUnauthorized, "")
+		return
+	}
+
+	type retParam struct {
+		Token string `json:"token"`
+	}
+
+
+	// Get a new JWT
+	expirySecs := 3600
+	expiry := time.Duration(expirySecs) * time.Second
+	new_token, err := auth.MakeJWT(refresh_token.UserID, h.jwtSecret, expiry)
+
+
+	respondWithJSON(w, http.StatusOK, retParam{
+		Token: new_token,
+	})
+	return
+
+}
+
+func (h *UserHandler) revokeToken(w http.ResponseWriter, req *http.Request) {
+	token,err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error refreshing tokens")
+		return
+	}
+
+	
+	err = h.DB.RevokeToken(req.Context(),token)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "")
+		return
+	}
+
+	respondWithJSON(w, http.StatusNoContent, nil)
+	return
+
 }

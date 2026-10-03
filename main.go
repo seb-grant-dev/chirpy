@@ -92,6 +92,8 @@ func main() {
 
 	serverMux.HandleFunc("POST /api/users",userHandler.createUser)
 	serverMux.HandleFunc("POST /api/login", userHandler.doLogin)
+	serverMux.HandleFunc("POST /api/refresh", userHandler.refreshToken)
+	serverMux.HandleFunc("POST /api/revoke", userHandler.revokeToken)
 
 	serverMux.HandleFunc("GET /api/chirps",chirpHandler.getChirps)
 	serverMux.HandleFunc("GET /api/chirps/{chirpID}",chirpHandler.getChirp)

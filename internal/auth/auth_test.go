@@ -4,6 +4,7 @@ import (
 	"testing"
 	"fmt"
 	"time"
+	"encoding/hex"
 	"net/http/httptest"
 	"net/http"
 	"github.com/google/uuid"
@@ -151,5 +152,25 @@ func TestGetBearerToken(t *testing.T) {
 			}
 		})
 
+	}
+}
+
+func TestMakeRefreshToken(t *testing.T) {
+	refreshToken := MakeRefreshToken()
+
+	t.Logf("Token Length: %d",len(refreshToken))
+	if len(refreshToken) == 0 {
+		t.Errorf("MakeRefreshToken: Generated empty refresh token")
+		return
+	}
+
+	decoded,err := hex.DecodeString(refreshToken)
+	if err != nil {
+		t.Errorf("MakeRefreshToken: Decoding refresh token failed")
+		return
+	}
+	if len(decoded) != 32 {
+		t.Errorf("MakeRefreshToken: Generated refresh token of wrong length")
+		return
 	}
 }

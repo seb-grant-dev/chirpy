@@ -26,7 +26,5 @@ WHERE
   users.email = $1
   AND users.hashed_password = $2;
 
-
-
 -- name: ResetUsers :exec
 DELETE FROM users;

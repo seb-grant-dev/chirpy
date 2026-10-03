@@ -104,7 +104,7 @@ func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
 
 	loggedInUserID, err := auth.ValidateJWT(bearerToken, h.jwtSecret)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Could not validate token: %s",err))
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("%d Could not validate token: %s",http.StatusUnauthorized,err))
 		return
 	}
 

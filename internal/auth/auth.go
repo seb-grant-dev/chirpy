@@ -5,10 +5,13 @@ import (
 	"errors"
 	"time"
 	"strings"
+	"encoding/hex"
 	"net/http"
+	"crypto/rand"
 	"github.com/google/uuid"
 	"github.com/alexedwards/argon2id"
 	"github.com/golang-jwt/jwt/v5"
+
 )
 
 func HashPassword(password string) (string,error) {
@@ -91,4 +94,13 @@ func GetBearerToken(headers http.Header) (string,error) {
 	}
 
 	return strings.TrimPrefix(auth,"Bearer "), nil
+}
+
+func MakeRefreshToken() string {
+	key := make([]byte,32)
+	_,err := rand.Read(key)
+	if err != nil {
+		return ""
+	}
+	return hex.EncodeToString(key)
 }

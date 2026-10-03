@@ -77,6 +77,56 @@ func (h *UserHandler) createUser(w http.ResponseWriter, req *http.Request) {
 	return
 }
 
+func (h *UserHandler) updateUser(w http.ResponseWriter, req *http.Request) {
+	type parameters struct {
+		Password string `json:"password"`
+		Email string `json:"email"`
+	}
+
+	var user *parameters
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&user)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters")
+		return
+	}
+
+	accessToken,err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid access token.")
+		return
+	}
+
+	userId, err := auth.ValidateJWT(accessToken, h.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect user ID")
+		return
+	}
+
+	hashedPassword, _ := auth.HashPassword(user.Password)
+
+	updateUserParams := database.UpdateUserParams{
+		ID: userId,
+		HashedPassword: hashedPassword,
+		Email: user.Email,
+	}
+
+
+	updatedUser, err := h.DB.UpdateUser(req.Context(),updateUserParams)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Could not update user. %s",err))
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, User{
+		ID: updatedUser.ID,
+		CreatedAt: updatedUser.CreatedAt,
+		UpdatedAt: updatedUser.UpdatedAt,
+		Email: updatedUser.Email,
+	})
+	return
+}
+
 func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
@@ -158,10 +208,6 @@ func (h *UserHandler) refreshToken(w http.ResponseWriter, req *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "")
 		return
 	}
-
-	fmt.Printf("Refresh Token: %+v",refresh_token)
-	fmt.Printf("Refresh Token Revoked: %v",refresh_token.RevokedAt.Valid)
-
 
 	if refresh_token.RevokedAt.Valid {
 		respondWithError(w, http.StatusUnauthorized, "")

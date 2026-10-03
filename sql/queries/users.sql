@@ -26,5 +26,12 @@ WHERE
   users.email = $1
   AND users.hashed_password = $2;
 
+-- name: UpdateUser :one
+UPDATE users
+SET email = $1, hashed_password = $2
+WHERE
+  users.id = $3
+RETURNING *;
+
 -- name: ResetUsers :exec
 DELETE FROM users;

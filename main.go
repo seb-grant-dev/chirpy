@@ -91,6 +91,7 @@ func main() {
 	})
 
 	serverMux.HandleFunc("POST /api/users",userHandler.createUser)
+	serverMux.HandleFunc("PUT /api/users", userHandler.updateUser)
 	serverMux.HandleFunc("POST /api/login", userHandler.doLogin)
 	serverMux.HandleFunc("POST /api/refresh", userHandler.refreshToken)
 	serverMux.HandleFunc("POST /api/revoke", userHandler.revokeToken)

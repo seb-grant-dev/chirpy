@@ -16,10 +16,12 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email 		string 		`json:"email"`
+	Token			string 		`json:"token"`
 }
 
 type UserHandler struct {
 	DB *database.Queries
+	jwtSecret string
 }
 
 
@@ -78,6 +80,7 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
 		Email string `json:"email"`
+		ExpiresInSeconds int `json:"expires_in_seconds"`
 	}
 
 	var user *parameters
@@ -101,11 +104,33 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 
 	if result {
 
+		expirySecs := 3600
+
+		if user.ExpiresInSeconds != 0 {
+			if (user.ExpiresInSeconds < expirySecs) {
+				expirySecs = user.ExpiresInSeconds
+			}
+		}
+
+		
+		fmt.Println(expirySecs)
+
+		expiry := time.Duration(expirySecs) * time.Second
+
+		token, err := auth.MakeJWT(loggedInUser.ID, h.jwtSecret, expiry)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Login failed: %s\n",err))
+			return
+		}
+
+		fmt.Sprintf("Token: %s",token)
+
 		retUser := User{
 			ID: loggedInUser.ID,
 			CreatedAt: loggedInUser.CreatedAt,
 			UpdatedAt: loggedInUser.UpdatedAt,
 			Email: loggedInUser.Email,
+			Token: token,
 		}
 
 		respondWithJSON(w, http.StatusOK, retUser)

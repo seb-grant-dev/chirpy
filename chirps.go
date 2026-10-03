@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/seb-grant-dev/chirpy/internal/database"
+	"github.com/seb-grant-dev/chirpy/internal/auth"
 )
 
 type ChirpError struct {
@@ -24,6 +25,7 @@ type Chirp struct {
 
 type ChirpHandler struct {
 	DB *database.Queries
+	jwtSecret string
 }
 
 func (h *ChirpHandler) getChirps(w http.ResponseWriter, req *http.Request) {
@@ -93,10 +95,22 @@ func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
 	}
 
 
+	fmt.Println(req.Header)
+	bearerToken, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("User not logged in - couldn't get token: %s",err))
+		return
+	}
+
+	loggedInUserID, err := auth.ValidateJWT(bearerToken, h.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Could not validate token: %s",err))
+		return
+	}
 
 	chirpParams := database.CreateChirpParams{
 		Body: cleanProfanity(chirp.Body),
-		UserID: chirp.UserID,
+		UserID: loggedInUserID,
 	}
 
 

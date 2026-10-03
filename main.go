@@ -14,6 +14,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	DB *database.Queries
 	platform string
+	jwtSecret string
 }
 
 
@@ -64,6 +65,7 @@ func main() {
 	}
 
 	apiCfg.platform = os.Getenv("PLATFORM")
+	jwtSecret := os.Getenv("JWT_SECRET")
 
 	dbUrl := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres",dbUrl)
@@ -74,8 +76,11 @@ func main() {
 	
 	dbQueries := database.New(db)
 	apiCfg.DB = dbQueries
+	apiCfg.jwtSecret = jwtSecret
 	userHandler.DB = dbQueries
+	userHandler.jwtSecret = jwtSecret
 	chirpHandler.DB = dbQueries
+	chirpHandler.jwtSecret = jwtSecret
 
 	handler := http.StripPrefix("/app/",http.FileServer(http.Dir(".")))
 	serverMux.Handle("/app/", apiCfg.middlewareMetricsInc(handler))

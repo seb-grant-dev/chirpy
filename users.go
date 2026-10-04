@@ -18,6 +18,7 @@ type User struct {
 	Email 		string 		`json:"email"`
 	Token			string 		`json:"token"`
 	RefreshToken			string 		`json:"refresh_token"`
+	IsChirpyRed		bool	`json:"is_chirpy_red"`
 }
 
 type UserHandler struct {
@@ -123,6 +124,7 @@ func (h *UserHandler) updateUser(w http.ResponseWriter, req *http.Request) {
 		CreatedAt: updatedUser.CreatedAt,
 		UpdatedAt: updatedUser.UpdatedAt,
 		Email: updatedUser.Email,
+		IsChirpyRed: updatedUser.IsChirpyRed,
 	})
 	return
 }
@@ -185,6 +187,7 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 			Email: loggedInUser.Email,
 			Token: token,
 			RefreshToken: refresh_token,
+			IsChirpyRed: loggedInUser.IsChirpyRed,
 		}
 
 		respondWithJSON(w, http.StatusOK, retUser)

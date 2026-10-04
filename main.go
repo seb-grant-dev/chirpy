@@ -82,6 +82,11 @@ func main() {
 	chirpHandler.DB = dbQueries
 	chirpHandler.jwtSecret = jwtSecret
 
+	webhookHandler := &WebhookHandler{
+		DB: dbQueries,
+		jwtSecret: jwtSecret,
+	}
+
 	handler := http.StripPrefix("/app/",http.FileServer(http.Dir(".")))
 	serverMux.Handle("/app/", apiCfg.middlewareMetricsInc(handler))
 
@@ -105,7 +110,7 @@ func main() {
 	serverMux.HandleFunc("POST /admin/reset",apiCfg.resetHits)
 	serverMux.HandleFunc("GET /admin/metrics",apiCfg.outputHits)
 	
-
+	serverMux.HandleFunc("POST /api/polka/webhooks",webhookHandler.handle)
 
 	server.ListenAndServe()
 

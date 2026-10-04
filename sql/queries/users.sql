@@ -9,6 +9,14 @@ VALUES (
 )
 RETURNING *;
 
+-- name: GetUser :one
+SELECT
+  *
+FROM
+  users
+WHERE
+  users.id = $1;
+
 -- name: GetUserForEmail :one
 SELECT
   *
@@ -31,6 +39,13 @@ UPDATE users
 SET email = $1, hashed_password = $2
 WHERE
   users.id = $3
+RETURNING *;
+
+-- name: UpgradeUser :one
+UPDATE users
+SET is_chirpy_red = TRUE
+WHERE
+  users.id = $1
 RETURNING *;
 
 -- name: ResetUsers :exec

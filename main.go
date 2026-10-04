@@ -15,6 +15,7 @@ type apiConfig struct {
 	DB *database.Queries
 	platform string
 	jwtSecret string
+	polkaKey string
 }
 
 
@@ -74,9 +75,13 @@ func main() {
 		os.Exit(1)
 	}
 	
+	polkaKey := os.Getenv("POLKA_KEY")
+
 	dbQueries := database.New(db)
 	apiCfg.DB = dbQueries
 	apiCfg.jwtSecret = jwtSecret
+	apiCfg.polkaKey = polkaKey
+
 	userHandler.DB = dbQueries
 	userHandler.jwtSecret = jwtSecret
 	chirpHandler.DB = dbQueries
@@ -84,7 +89,7 @@ func main() {
 
 	webhookHandler := &WebhookHandler{
 		DB: dbQueries,
-		jwtSecret: jwtSecret,
+		polkaKey: polkaKey,
 	}
 
 	handler := http.StripPrefix("/app/",http.FileServer(http.Dir(".")))

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/seb-grant-dev/chirpy/internal/database"
+	"github.com/seb-grant-dev/chirpy/internal/auth"
 )
 
 type WebhookParams struct {
@@ -17,7 +18,7 @@ type WebhookParams struct {
 
 type WebhookHandler struct {
 	DB *database.Queries
-	jwtSecret string
+	polkaKey string
 }
 
 func (h *WebhookHandler) handle(w http.ResponseWriter, req *http.Request) {
@@ -31,19 +32,28 @@ func (h *WebhookHandler) handle(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Printf("%\n",parameters.Event)
-
 	switch parameters.Event {
 	case "user.upgraded":
 		h.upgradeUser(w, req, parameters)
 	default:
-		fmt.Printf("Params: %+v\n",parameters)
 		respondWithJSON(w, http.StatusNoContent, "")
 		return
 	}
 }
 
 func (h *WebhookHandler) upgradeUser(w http.ResponseWriter, req *http.Request, params *WebhookParams) {
+
+	apiKey, err := auth.GetAPIKey(req.Header)
+	if err != nil {
+		respondWithError(w,http.StatusUnauthorized,"Error: API Key not provided")
+		return
+	}
+
+	if apiKey != h.polkaKey {
+		respondWithError(w,http.StatusUnauthorized,"Error: Invalid API Key")
+		return
+	}
+
 
 	user, err := h.DB.GetUser(req.Context(),params.Data.UserID)
 	fmt.Printf("\nParams: %+v\nUser: %+v\n",params,user)

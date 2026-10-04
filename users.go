@@ -155,7 +155,6 @@ func (h *UserHandler) doLogin(w http.ResponseWriter, req *http.Request) {
 	if result {
 
 		expirySecs := 3600
-
 		expiry := time.Duration(expirySecs) * time.Second
 
 		token, err := auth.MakeJWT(loggedInUser.ID, h.jwtSecret, expiry)

@@ -94,8 +94,6 @@ func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-
-	fmt.Println(req.Header)
 	bearerToken, err := auth.GetBearerToken(req.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("User not logged in - couldn't get token: %s",err))
@@ -120,8 +118,6 @@ func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Printf("%+v\n",newChirp)
-
 	respondWithJSON(w,http.StatusCreated,Chirp{
 			ID: newChirp.ID,
 			CreatedAt: newChirp.CreatedAt,
@@ -133,7 +129,45 @@ func (h *ChirpHandler) createChirp(w http.ResponseWriter, req *http.Request) {
 	return
 }
 
+func (h *ChirpHandler) deleteChirp(w http.ResponseWriter, req *http.Request){
+	chirpID,err := uuid.Parse(req.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Error getting Chirp")
+		return
+	}
 
+	bearerToken, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("User not logged in - couldn't get token: %s",err))
+		return
+	}
+
+	loggedInUserID, err := auth.ValidateJWT(bearerToken, h.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("%d Could not validate token: %s",http.StatusUnauthorized,err))
+		return
+	}
+
+	dbChirp, err := h.DB.GetChirp(req.Context(),chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Chirp not found")
+	}
+
+	if dbChirp.UserID != loggedInUserID {
+		respondWithError(w, http.StatusForbidden, "Chirp belonds to someone else.")
+		return
+	}
+
+	err = h.DB.DeleteChirp(req.Context(),chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("%d Internal Server Error: %s",http.StatusInternalServerError,err))
+		return
+	}
+
+	respondWithJSON(w, http.StatusNoContent, "Chirp deleted")
+	return
+
+}
 
 
 func ReplaceAllCI(s, old, new string) string {

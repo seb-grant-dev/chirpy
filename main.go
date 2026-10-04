@@ -99,7 +99,7 @@ func main() {
 	serverMux.HandleFunc("GET /api/chirps",chirpHandler.getChirps)
 	serverMux.HandleFunc("GET /api/chirps/{chirpID}",chirpHandler.getChirp)
 	serverMux.HandleFunc("POST /api/chirps",chirpHandler.createChirp)
-
+	serverMux.HandleFunc("DELETE /api/chirps/{chirpID}",chirpHandler.deleteChirp)
 	
 
 	serverMux.HandleFunc("POST /admin/reset",apiCfg.resetHits)

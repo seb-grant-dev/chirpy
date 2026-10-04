@@ -27,3 +27,8 @@ FROM
   chirps
 WHERE
   id = $1;
+
+-- name: DeleteChirp :exec
+DELETE from chirps
+WHERE
+  id = $1;

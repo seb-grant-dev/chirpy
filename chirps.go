@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"regexp"
+	"slices"
 	"net/http"
 	"encoding/json"
 	"github.com/google/uuid"
@@ -30,8 +31,14 @@ type ChirpHandler struct {
 
 func (h *ChirpHandler) getChirps(w http.ResponseWriter, req *http.Request) {
 
-	chirps, err := h.DB.GetChirps(req.Context())
+	var chirps []database.Chirp
 
+	author_id, err := uuid.Parse(req.URL.Query().Get("author_id"))
+	if author_id != uuid.Nil {
+		chirps, err = h.DB.GetChirpsForAuthor(req.Context(), author_id)
+	} else {
+		chirps, err = h.DB.GetChirps(req.Context())
+	}
 
 	if err != nil {
 		respondWithError(w, 400, "Error retrieving chirps")
@@ -39,6 +46,21 @@ func (h *ChirpHandler) getChirps(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var retChirps []Chirp
+	
+	sort_query := req.URL.Query().Get("sort")
+	if sort_query == "desc" {
+		slices.SortFunc(chirps, func(l, r database.Chirp) int {
+			if l.CreatedAt.After(r.CreatedAt) {
+				return -1
+			}
+			if l.CreatedAt.Before(r.CreatedAt) {
+				return 1
+			}
+
+			return 0
+		})
+	}
+
 
 	for _, chirp := range chirps {
 		retChirps = append(retChirps, Chirp(chirp))
